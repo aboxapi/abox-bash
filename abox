@@ -34,7 +34,7 @@ getVoice() {
          -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
          -H 'X-Requested-With: XMLHttpRequest'\
          -H 'Content-Length: 9'\
-         -H 'Cookie: acabox=f69l1cvv5g8d7cnm335kf0i0o1; __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1'\
+         -H 'Cookie: '"$cookie"\
          -H 'Connection: keep-alive' \
          -d "$text" 'https://acapela-box.com/AcaBox/filtervoices.php')
     echo -n "$result"
@@ -188,7 +188,7 @@ case "${args[6]}" in
         then
             wget $url
         else
-            wget $url -o "${args[7]}"
+            wget $url -O "${args[7]}"
         fi
         ;;
     play|mpv)
