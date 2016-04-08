@@ -1,0 +1,201 @@
+#!/bin/bash
+
+urlencode() {
+    old_lc_collate=$LC_COLLATE
+    LC_COLLATE=C
+    local length="${#1}"
+    for (( i = 0; i < length; i++ )); do
+        local c="${1:i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-éèàâêôöëäïîÂÊÛÎÔÄËùÜÏÖ]) printf "$c" ;;
+            *) printf '%%%02X' "'$c" ;;
+        esac
+    done
+    LC_COLLATE=$old_lc_collate
+}
+
+urldecode() {
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+cookie=$(cat ./cookie)
+
+getVoice() {
+    text="ISO=$1"
+    len=$(echo -n "$text" | wc -m)
+    result=$(curl -s --insecure -XPOST \
+         -H 'Host: acapela-box.com'\
+         -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'\
+         -H 'Accept: text/html, */*; q=0.01'\
+         -H 'Accept-Language: en-US,en;q=0.5'\
+         -H 'Accept-Encoding: gzip, deflate, br'\
+         -H 'Referer: https://acapela-box.com/AcaBox/index.php'\
+         -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
+         -H 'X-Requested-With: XMLHttpRequest'\
+         -H 'Content-Length: 9'\
+         -H 'Cookie: acabox=f69l1cvv5g8d7cnm335kf0i0o1; __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1'\
+         -H 'Connection: keep-alive' \
+         -d "$text" 'https://acapela-box.com/AcaBox/filtervoices.php')
+    echo -n "$result"
+}
+
+getAcapella() {
+    vct=$3
+    spd=$4
+    frmt=$5
+
+    words=$(urlencode "$1") #$1
+    voice="$2"
+    text="text=%5Cvct%3D$vct%5C%20%5Cspd%3D$spd%5C%20$words&voice=$voice&listen=1&format=$frmt&codecMP3=1&spd=$spd&vct=$vct"
+    len=$(echo -n "$text" | wc -m)
+    url=$(curl -s --insecure -XPOST \
+         -H 'Host: acapela-box.com'\
+         -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'\
+         -H 'Accept: application/json, text/javascript, */*; q=0.01' -H 'Accept-Language: en-US,en;q=0.5'\
+         -H 'Accept-Encoding: gzip, deflate, br'\
+         -H 'Referer: https://acapela-box.com/AcaBox/index.php'\
+         -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
+         -H 'X-Requested-With: XMLHttpRequest'\
+         -H 'Content-Length: '$len\
+         -H 'Cookie: '"$cookie"\
+         -H 'Connection: keep-alive'\
+         -d "$text" 'https://acapela-box.com/AcaBox/dovaas.php') # | sed -r 's/.*"snd_url":"([^"]+)".*/\1/;s/\\//g')
+    echo -n $url
+}
+argv=( "$@" )
+argc=${#argv[@]}
+
+args=()
+args[2]="antoinefromafar22k"
+args[3]=100
+args[4]=180
+args[5]="WAV 22kHz"
+args[6]="show_url"
+i=0
+arg=1
+
+while [ "$i" -lt "$argc" ]; do
+    case "${argv[$i]}" in
+        \-\-help|\-h)
+            cat <<EOF
+AcapelaBox CLI v2 - Use acapela-box.com from the command line.
+Developped by mure-r_c (LazyShpee), 8/4/16
+
+Usage $0 [options] <text>
+      $0 [options] <-f filename|--file filename>
+      $0 <-l|--list> <ISO country code>
+
+Where options are:
+  -v,  --voice		Specify voice (default:antoinefromafar22k)
+  -o,  --output		Specify output file for download action
+  -a,  --action		Specify an action in
+			  - url, show_url: shows the url (default)
+			  - play, mpv: plays the sound using mpv
+			  - stdout, curl: prints the sound to stdout using curl
+			  - wget, download, dl: downloads to file, 
+						can specify a name with -o
+  -S,  --shaping	Specify a voice shaping (default:180)
+  -s,  --speed		Specify a voice speed (default:100)
+EOF
+            exit 0
+            ;;
+        \-\-list|\-l)
+            arg=9
+            ;;
+        \-\-file|\-f)
+            arg=8
+            ;;
+        \-\-output|\-o)
+            arg=7
+            ;;
+        \-\-action|\-a)
+            arg=6
+            ;;
+        \-\-format|\-f)
+            arg=5
+            ;;
+        \-\-shaping|\-S)
+            arg=4
+            ;;
+        \-\-speed|\-s)
+            arg=3
+            ;;
+        \-\-voice|\-v)
+            arg=2
+            ;;
+        *)
+            args["$arg"]="${argv[$i]}"
+            arg=1
+            ;;
+    esac
+    let "i++"
+done
+
+if [ ! -z "${args[9]}" ];
+then
+    result=$(getVoice "${args[9]}")
+    if [[ $result == *"ISO not"* ]];
+    then
+        echo "ISO code not valid."
+        exit 1
+    fi
+    list=$(echo "$result" | sed -nr 's/.*data-id="([^"]+)".*"/\t\1/gp;s/.*value="[^"]+">([^<]+)<.*/- \1/gp')
+    
+    echo "$list" | sed 'N; 
+s/\(.*\)\n\(.*\)/\2\
+\1/'
+    exit 0
+fi
+
+if [ ! -z "${args[8]}" ];
+then
+    if [ -f "${args[8]}" ];
+    then
+        args[1]=$(cat "${args[8]}")
+    else
+        echo "No such file: ${args[8]}"
+    fi
+fi
+
+if [ -z "${args[1]}" ];
+then
+    echo "I need some text to say some things"
+    exit 1
+fi
+
+result="$(getAcapella "${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}")"
+
+ok=$(echo "$result" | sed -r 's/.*"res":"([^"]+)".*/\1/')
+
+if [ "$ok" = "NOK" ];
+then
+    echo "Something went wrong, check your parameters."
+    exit 1
+fi
+
+url=$(echo "$result" | sed -r 's/.*"snd_url":"([^"]+)".*/\1/;s/\\//g')
+
+case "${args[6]}" in
+    show_url|url)
+        echo $url
+        ;;
+    stdout|curl)
+        curl $url
+        ;;
+    download|dl|wget)
+        if [ -z "${args[7]}" ];
+        then
+            wget $url
+        else
+            wget $url -o "${args[7]}"
+        fi
+        ;;
+    play|mpv)
+        mpv $url
+        ;;
+    *)
+        echo "Wrong action given."
+        ;;
+esac
+exit 0
