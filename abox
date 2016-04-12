@@ -19,7 +19,17 @@ urldecode() {
     printf '%b' "${url_encoded//%/\\x}"
 }
 
-cookie=$(cat ./cookie)
+
+cookie_gen() {
+	curl -si "https://acapela-box.com/AcaBox/index.php" | sed -nr "s/Set\-Cookie:.*acabox=([^;]+).*/\1/p" > ./cookie
+}
+
+if [ ! -f ./cookie ];
+then
+	cookie_gen
+fi
+
+cookie="acabox=$(cat ./cookie); __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1"
 
 getVoice() {
     text="ISO=$1"
@@ -77,6 +87,11 @@ arg=1
 
 while [ "$i" -lt "$argc" ]; do
     case "${argv[$i]}" in
+    	\-\-reload|\-r)
+			cookie_gen
+			echo "Cookie regenerated."
+			exit 0
+			;;
         \-\-help|\-h)
             cat <<EOF
 AcapelaBox CLI v2 - Use acapela-box.com from the command line.
@@ -165,7 +180,6 @@ then
 fi
 
 result="$(getAcapella "${args[1]}" "${args[2]}" "${args[3]}" "${args[4]}" "${args[5]}")"
-
 ok=$(echo "$result" | sed -r 's/.*"res":"([^"]+)".*/\1/')
 
 if [ "$ok" = "NOK" ];
