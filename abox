@@ -43,7 +43,7 @@ getVoice() {
          -H 'Referer: https://acapela-box.com/AcaBox/index.php'\
          -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
          -H 'X-Requested-With: XMLHttpRequest'\
-         -H 'Content-Length: 9'\
+         -H 'Content-Length: $len'\
          -H 'Cookie: '"$cookie"\
          -H 'Connection: keep-alive' \
          -d "$text" 'https://acapela-box.com/AcaBox/filtervoices.php')
@@ -94,7 +94,7 @@ while [ "$i" -lt "$argc" ]; do
 			;;
         \-\-help|\-h)
             cat <<EOF
-AcapelaBox CLI v2 - Use acapela-box.com from the command line.
+AcapelaBox CLI v3 - Use acapela-box.com from the command line.
 Developped by mure-r_c (LazyShpee), 8/4/16
 
 Usage $0 [options] <text>
@@ -102,6 +102,7 @@ Usage $0 [options] <text>
       $0 <-l|--list> <ISO country code>
 
 Where options are:
+  -r,  --cookie		Regenerates the cookie, use this if no response is given.
   -v,  --voice		Specify voice (default:antoinefromafar22k)
   -o,  --output		Specify output file for download action
   -a,  --action		Specify an action in
