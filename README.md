@@ -32,5 +32,3 @@ This tool was tested on bash (Linux), MSYS2 (Windows) and bash (Windows)
   `-S`,  `--shaping`	Specify a voice shaping (default:180)
 
   `-s`,  `--speed`		Specify a voice speed (default:100)
-  
-  ## Version history
