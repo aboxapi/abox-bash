@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cookie_file="cookie"
+
 urlencode() {
     old_lc_collate=$LC_COLLATE
     LC_COLLATE=C
@@ -21,15 +23,30 @@ urldecode() {
 
 
 cookie_gen() {
-	curl -si "https://acapela-box.com/AcaBox/index.php" | sed -nr "s/Set\-Cookie:.*acabox=([^;]+).*/\1/p" > ./cookie
+	curl -si "https://acapela-box.com/AcaBox/index.php" | grep -E "Cookie:.*acabox=.*" > $cookie_file
 }
 
-if [ ! -f ./cookie ];
-then
-	cookie_gen
-fi
+get_cookie() {
+    if [ ! -f $cookie_file ]; then
+        echo "Cookie not found, generating..." 1>&2
+        cookie_gen
+    fi
+    coo=$(cat $cookie_file)
+    exp=$(echo $coo | sed -r "s/.*expires=[^,]+, ([^;]+);.*/\1/g")
+    # expires=Mon, 01-Aug-2016 08:24:28 GMT;
+    todate=$(date +%s)
+    cond=$(date -d "$exp" +%s)
+    
+    if [ $todate -ge $cond ];
+    then
+        echo "Cookie too old, regenerating..." 1>&2
+        cookie_gen
+    fi
+    
+    cat $cookie_file | sed -nr "s/Set\-Cookie:.*acabox=([^;]);.*/\1/p"
+}
 
-cookie="acabox=$(cat ./cookie); __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1"
+cookie="acabox=$(get_cookie); __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1"
 
 getVoice() {
     text="ISO=$1"
@@ -43,7 +60,7 @@ getVoice() {
          -H 'Referer: https://acapela-box.com/AcaBox/index.php'\
          -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
          -H 'X-Requested-With: XMLHttpRequest'\
-         -H 'Content-Length: $len'\
+         -H 'Content-Length: '$len\
          -H 'Cookie: '"$cookie"\
          -H 'Connection: keep-alive' \
          -d "$text" 'https://acapela-box.com/AcaBox/filtervoices.php')
@@ -94,8 +111,8 @@ while [ "$i" -lt "$argc" ]; do
 			;;
         \-\-help|\-h)
             cat <<EOF
-AcapelaBox CLI v3 - Use acapela-box.com from the command line.
-Developped by mure-r_c (LazyShpee), 8/4/16
+AcapelaBox CLI v4.1 - Use acapela-box.com from the command line.
+Developped by mure-r_c (LazyShpee), 31/7/2016
 
 Usage $0 [options] <text>
       $0 [options] <-f filename|--file filename>
@@ -153,6 +170,7 @@ then
     result=$(getVoice "${args[9]}")
     if [[ $result == *"ISO not"* ]];
     then
+        echo "$result"
         echo "ISO code not valid."
         exit 1
     fi
