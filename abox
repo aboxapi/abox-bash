@@ -43,7 +43,7 @@ get_cookie() {
         cookie_gen
     fi
     
-    cat $cookie_file | sed -nr "s/Set\-Cookie:.*acabox=([^;]);.*/\1/p"
+    cat $cookie_file | sed -nr "s/Set\-Cookie:.*acabox=([^;]+);.*/\1/p"
 }
 
 cookie="acabox=$(get_cookie); __utma=221195784.43393818.1460058666.1460058666.1460068143.2; __utmc=221195784; __utmz=221195784.1460058666.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=221195784.11.10.1460068143; __utmt=1"
